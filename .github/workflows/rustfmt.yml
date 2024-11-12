@@ -1,0 +1,29 @@
+name: Format
+
+on: [push, pull_request]
+
+jobs:
+  format-and-commit:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          components: clippy, rustfmt
+          override: true
+      - name: Format code
+        run: make format
+      - name: Commit changes
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "github-actions@github.com"
+          git status | grep -q 'nothing to commit, working tree clean' && exit 0
+          git add .
+          git commit -m "Format code"
+          git push

@@ -1,0 +1,9 @@
+{
+    "editor.formatOnSave": true,
+    "editor.inlayHints.enabled": "offUnlessPressed",
+    "makefile.configureOnOpen": false,
+    "files.watcherExclude": {
+        "**/target/**": true,
+        "**/build/**": true
+    }
+}
