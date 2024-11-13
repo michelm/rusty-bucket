@@ -5,24 +5,13 @@ use google_cloud_storage::http::objects::get::GetObjectRequest;
 use google_cloud_storage::http::objects::list::ListObjectsRequest;
 use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
 use std::error;
-use std::fmt;
 use std::fs;
 use std::path::Path;
 use tokio::fs as async_fs;
 
 pub type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
 
-#[derive(Debug)]
-pub struct EmptyVec;
-
-impl fmt::Display for EmptyVec {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "invalid first item to double")
-    }
-}
-
-impl error::Error for EmptyVec {}
-
+/// Get a Google Cloud (Storage) client
 async fn get_client() -> Result<Client> {
     let config = ClientConfig::default().with_auth().await?;
     Ok(Client::new(config))
