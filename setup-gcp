@@ -15,13 +15,16 @@ USAGE=$(cat <<-END
 Setup Google Cloud Platform (GCP) project and storage bucket.
 
 Create a new project, enables the 'storage.googleapis.com' service, adds a
-billing account, and finally create a storage bucket. If no project identifier
-is provided, the storage bucket will be added to the gcloud configured default
-project.
+billing account, and finally create a storage bucket.
+If no project identifier is provided, the storage bucket will be added to the
+gcloud configured default project.
+When creating a new project, the project name will be the same as the
+project identifier unless a project name is provided.
 
-Usage: $(basename $0) <opt>
+Usage: 
+    $(basename $0) [OPTION]
 
-Where <opt> is one or more of:
+Options:
     -p project          project identifier
     -n project_name     project name
     -b bucket           bucket identifier
