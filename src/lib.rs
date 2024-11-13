@@ -2,6 +2,7 @@ use google_cloud_storage::client::{Client, ClientConfig};
 use google_cloud_storage::http::objects::delete::DeleteObjectRequest;
 use google_cloud_storage::http::objects::download::Range;
 use google_cloud_storage::http::objects::get::GetObjectRequest;
+use google_cloud_storage::http::objects::list::ListObjectsRequest;
 use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
 use std::error;
 use std::fmt;
@@ -89,7 +90,7 @@ pub async fn download(bucket: String, destination: &Path, source: String) -> Res
     Ok(size)
 }
 
-/// Delete a file from a Google Cloud Storage bucket
+/// Delete a file(object) from a Google Cloud Storage bucket
 ///
 /// Arguments:
 ///
@@ -108,4 +109,34 @@ pub async fn delete(bucket: String, object: String) -> Result<()> {
         .await?;
 
     Ok(())
+}
+
+/// List files(objects) in a Google Cloud Storage bucket
+///
+/// Arguments:
+///
+/// - bucket: Name of the google cloud storage (bucket)
+///
+/// Returns:
+/// - A vector of file names in the bucket
+///
+pub async fn list_objects(bucket: String) -> Result<Vec<String>> {
+    let client = get_client().await?;
+
+    let objects = client
+        .list_objects(&ListObjectsRequest {
+            bucket,
+            ..Default::default()
+        })
+        .await?;
+
+    let mut result: Vec<String> = Vec::new();
+
+    if let Some(items) = objects.items {
+        for object in items {
+            result.push(object.name.clone());
+        }
+    }
+
+    Ok(result)
 }
