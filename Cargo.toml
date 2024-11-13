@@ -1,8 +1,9 @@
 [package]
-name = "rust_github_template"
+name = "rusty_bucket"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.20", features = ["derive"] }
-num-traits = "0.2.19"
+google-cloud-storage = "0.22.1"
+tokio = "1.41.1"

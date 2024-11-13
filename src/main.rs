@@ -1,46 +1,33 @@
 use clap::Parser;
+use std::path::Path;
 
-/// Simple program to greet a person
+/// Test application for up- and downloading files to Google Cloud Storage
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Operation; add|+, subtract|-, multiply|x, divide|/
+    /// Bucket name
+    #[arg(short, long, default_value = "gcpee-bucket")]
+    bucket: String,
+
+    /// Path of local file; source when uploading and destination when downloading
     #[arg(short, long)]
-    operator: String,
+    local: String,
 
-    /// Argument #1; augend|minuend|multiplier|numerator
-    #[arg(short = 'x', long)]
-    first: i32,
-
-    /// Argument #2; addend|subtrahend|multiplicand|denominator
-    #[arg(short = 'y', long)]
-    second: i32,
+    /// Path of remote file in the bucket; destination when uploading and source when downloading
+    #[arg(short, long)]
+    remote: String,
 }
 
-fn main() {
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
     let args = Args::parse();
-    let x = args.first;
-    let y = args.second;
+    let bucket = args.bucket;
+    let local = Path::new(args.local.as_str());
+    let remote: &'static str = Box::leak(args.remote.into_boxed_str());
+    println!("cp {:?} -> gs://{}/{}", local, bucket, remote);
 
-    match args.operator.trim() {
-        "add" | "+" => {
-            let result = rust_github_template::add(x, y);
-            println!("{} + {} = {}", x, y, result);
-        }
-        "subtract" | "-" => {
-            let result = rust_github_template::subtract(x, y);
-            println!("{} - {} = {}", x, y, result);
-        }
-        "multiply" | "x" => {
-            let result = rust_github_template::multiply(x, y);
-            println!("{} x {} = {}", x, y, result);
-        }
-        "divide" | "/" => {
-            let result = rust_github_template::divide(x, y).unwrap();
-            println!("{} / {} = {}", x, y, result);
-        }
-        _ => {
-            println!("Invalid operator: {}", args.operator);
-        }
+    match rusty_bucket::upload(bucket, local, remote).await {
+        Ok(size) => println!("\x1b[92mok\x1b[0m: uploaded {} bytes", size),
+        Err(e) => eprintln!("\x1b[91mfailed\x1b[0m: {}", e),
     }
 }
