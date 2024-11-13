@@ -26,9 +26,17 @@ async fn get_client() -> Result<Client> {
     Ok(Client::new(config))
 }
 
-pub async fn upload(bucket: String, path: &Path, destination: String) -> Result<usize> {
+/// Upload a file to a Google Cloud Storage bucket and returns the size of the uploaded file in bytes
+///
+/// Arguments:
+///
+/// - bucket: Name of the google cloud storage (bucket)
+/// - source: File name and path to be uploaded
+/// - destination: File name and path in the bucket
+///
+pub async fn upload(bucket: String, source: &Path, destination: String) -> Result<usize> {
     let client = get_client().await?;
-    let content: Vec<u8> = fs::read(path)?;
+    let content: Vec<u8> = fs::read(source)?;
     let destination: &'static str = Box::leak(destination.into_boxed_str());
 
     let object_type = UploadType::Simple(Media::new(destination));
@@ -46,7 +54,15 @@ pub async fn upload(bucket: String, path: &Path, destination: String) -> Result<
     Ok(object.size as usize)
 }
 
-pub async fn download(bucket: String, path: &Path, source: String) -> Result<usize> {
+/// Download a file from a Google Cloud Storage bucket and returns the size of the downloaded file in bytes
+///
+/// Arguments:
+///
+/// - bucket: Name of the google cloud storage (bucket)
+/// - destination: File name and path where downloaded file will be saved
+/// - source: File name and path in the bucket to be downloaded
+///
+pub async fn download(bucket: String, destination: &Path, source: String) -> Result<usize> {
     let client = get_client().await?;
 
     let data = client
@@ -63,11 +79,11 @@ pub async fn download(bucket: String, path: &Path, source: String) -> Result<usi
     let size = data.len();
 
     // Ensure the parent directory exists
-    if let Some(parent) = path.parent() {
+    if let Some(parent) = destination.parent() {
         async_fs::create_dir_all(parent).await?;
     }
 
-    fs::write(path, data)?;
+    fs::write(destination, data)?;
 
     Ok(size)
 }
