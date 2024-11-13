@@ -8,8 +8,32 @@ project=
 project_name=
 bucket=
 location="europe-west4"
+action="" # create|update
+billing_account=
 
-while getopts 'p:n:b:l:h' opt; do
+USAGE=$(cat <<-END
+Setup Google Cloud Platform (GCP) project and storage bucket.
+
+Create a new project, enables the 'storage.googleapis.com' service, adds a
+billing account, and finally create a storage bucket. If no project identifier
+is provided, the storage bucket will be added to the gcloud configured default
+project.
+
+Usage: $(basename $0) <opt>
+
+Where <opt> is one or more of:
+    -p project          project identifier
+    -n project_name     project name
+    -b bucket           bucket identifier
+    -l location         storage location (default: $location)
+    -B billing_account  billing account identifier
+    -h                  display this help message
+
+END
+
+)
+
+while getopts 'p:n:b:l:B:h' opt; do
   case "$opt" in
     p)
       project="$OPTARG"
@@ -26,25 +50,47 @@ while getopts 'p:n:b:l:h' opt; do
     l)
       location="$OPTARG"
       ;;
-   
+
+    B)
+      billing_account="$OPTARG"
+      ;;
+
     ?|h)
-      echo "Usage: $(basename $0) [-p project] [-n project_name] [-b bucket] [-l location]"
+      echo "$USAGE"
       exit 1
       ;;
   esac
 done
 
-if [ -z "$project" ]; then
-    # TODO: what if there is no default project?
+if [ -z "$project" ]
+then
+    # fails if there is no default project
     project=$(gcloud config get-value project)
+    action="update"
+elif gcloud projects list --format="value(project_id)" | grep -w -E "^$project\$" > /dev/null ; then
+    action="update"
+else
+    action="create"
 fi
 
-if [ -z "$project_name" ]; then
-    # TODO: what if the project does not exist?
-    project_name=$(gcloud projects describe $project --format="value(name)")
+if [ -z "$project_name" ]
+then
+    if [[ $action == "create" ]]
+    then
+        if [ -z "$billing_account" ]
+        then
+            printf "[\033[91mfail\033[0m] a billing account is required for new projects\n"
+            exit 1
+        fi
+
+        project_name="$project"
+    else
+        project_name=$(gcloud projects describe $project --format="value(name)")
+    fi
 fi
 
-if [ -z "$bucket" ]; then
+if [ -z "$bucket" ]
+then
     bucket="bucket"
 fi
 bucket="${project_name}-$bucket"
@@ -56,17 +102,31 @@ echo "storage location  : $location"
 echo ""
 
 echo "create project($project) ..."
-if gcloud projects list --format="value(project_id)" | grep -w -E "^$project\$" > /dev/null ; then
+if [[ $action == "update" ]]
+then
     printf "[\033[33mskip\033[0m] already exists\n"
 else
-    # TODO: find reason for quota exceeded error when creating project
     exe gcloud projects create $project --name=$project_name
     printf "[\033[92mok\033[0m] project created\n"
 fi
 echo ""
 
+if [ ! -z "$billing_account" ]
+then
+    echo "link billing account($billing_account) to project($project) ..."
+    if gcloud beta billing projects describe gcpeehaw | grep "billingEnabled: true" > /dev/null
+    then
+        printf "[\033[33mskip\033[0m] already linked\n"
+    else
+        exe gcloud beta billing projects link $project --billing-account=$billing_account
+        printf "[\033[92mok\033[0m] billing account linked\n"
+    fi
+fi
+echo ""
+
 echo "enabling 'storage.googleapis.com' service ..."
-if gcloud services list --project $project --enabled | grep -w -E "^storage.googleapis.com" > /dev/null ; then
+if gcloud services list --project $project --enabled | grep -w -E "^storage.googleapis.com" > /dev/null
+then
     printf "[\033[33mskip\033[0m] already enabled\n"
 else
     exe gcloud services enable \
@@ -77,7 +137,8 @@ fi
 echo ""
 
 echo "create storage bucket($bucket) ..."
-if gcloud storage buckets list --format="value(name)" | grep -w "$bucket" > /dev/null ; then
+if gcloud storage buckets list --format="value(name)" | grep -w "$bucket" > /dev/null
+then
     printf "[\033[33mskip\033[0m] already exists\n"
 else
     exe gcloud storage buckets create \
