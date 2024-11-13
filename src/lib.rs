@@ -1,4 +1,5 @@
 use google_cloud_storage::client::{Client, ClientConfig};
+use google_cloud_storage::http::objects::delete::DeleteObjectRequest;
 use google_cloud_storage::http::objects::download::Range;
 use google_cloud_storage::http::objects::get::GetObjectRequest;
 use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
@@ -86,4 +87,25 @@ pub async fn download(bucket: String, destination: &Path, source: String) -> Res
     fs::write(destination, data)?;
 
     Ok(size)
+}
+
+/// Delete a file from a Google Cloud Storage bucket
+///
+/// Arguments:
+///
+/// - bucket: Name of the google cloud storage (bucket)
+/// - object: File name and path in the bucket to be deleted
+///
+pub async fn delete(bucket: String, object: String) -> Result<()> {
+    let client = get_client().await?;
+
+    client
+        .delete_object(&DeleteObjectRequest {
+            bucket,
+            object,
+            ..Default::default()
+        })
+        .await?;
+
+    Ok(())
 }

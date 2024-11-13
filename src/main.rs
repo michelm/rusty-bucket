@@ -1,12 +1,16 @@
 use clap::{builder::PossibleValuesParser, Parser};
 use std::path::Path;
 
+static ACTIONS: [&str; 12] = [
+    "ls", "list", "put", "up", "upload", "get", "down", "download", "rm", "remove", "del", "delete",
+];
+
 /// Test application for up- and downloading files to Google Cloud Storage
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
     /// File action to be performed: upload or download
-    #[arg(short, long, default_value = "upload", value_parser = PossibleValuesParser::new(["ls", "list", "put", "up", "upload", "get", "down", "download"]))]
+    #[arg(short, long, default_value = "upload", value_parser = PossibleValuesParser::new(ACTIONS))]
     action: String,
 
     /// Bucket name
@@ -39,6 +43,7 @@ async fn main() {
     match action {
         "put" | "up" | "upload" => put_file(bucket, local, remote).await,
         "get" | "down" | "download" => get_file(bucket, local, remote).await,
+        "rm" | "remove" | "del" | "delete" => del_file(bucket, remote).await,
         _ => eprintln!("\x1b[91merror\x1b[0m: action '{}' is not supported", action),
     }
 }
@@ -57,6 +62,15 @@ async fn get_file(bucket: String, local: &Path, remote: String) {
 
     match rusty_bucket::download(bucket, local, remote).await {
         Ok(size) => println!("\x1b[92mok\x1b[0m: downloaded {} bytes", size),
+        Err(e) => eprintln!("\x1b[91mfailed\x1b[0m: {}", e),
+    }
+}
+
+async fn del_file(bucket: String, remote: String) {
+    println!("rm gs://{}/{}", bucket, remote);
+
+    match rusty_bucket::delete(bucket, remote).await {
+        Ok(_) => println!("\x1b[92mok\x1b[0m: object deleted"),
         Err(e) => eprintln!("\x1b[91mfailed\x1b[0m: {}", e),
     }
 }
